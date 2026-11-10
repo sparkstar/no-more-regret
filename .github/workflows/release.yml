@@ -1,0 +1,132 @@
+# The release's programs, for Linux and Windows. A tag v<version>, the
+# version of port/CMakeLists.txt's project (v<version>-<anything> for a
+# pre-release), builds them, runs the tests that need no game data on them
+# and makes a draft release of them, which is published by hand. Run by
+# hand, the workflow builds them as the run's artifacts alone.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  version:
+    name: Version
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+      - id: version
+        name: Version
+        run: |
+          version=$(sed -nE 's/^project\(crusader VERSION ([0-9.]+) .*/\1/p' port/CMakeLists.txt)
+          test -n "$version"
+          if [ "$GITHUB_REF_TYPE" = tag ]; then
+            case "$GITHUB_REF_NAME" in
+              "v$version" | "v$version"-*) ;;
+              *) echo "::error::the tag $GITHUB_REF_NAME is not v$version, port/CMakeLists.txt's version"; exit 1 ;;
+            esac
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+  linux:
+    name: Linux x64
+    needs: version
+    # Ubuntu 22.04's C library (glibc 2.35), which the program then needs at
+    # least; GCC 13, the port's, from the toolchain PPA. The C++ library is
+    # linked in and not exported (-rdynamic exports the program's own names
+    # for the crash reports), so that it is not the one of the system's
+    # libraries that SDL loads.
+    runs-on: ubuntu-22.04
+    env:
+      NAME: no-more-regret-${{ needs.version.outputs.version }}-linux-x64
+    steps:
+      - uses: actions/checkout@v7
+      - name: Packages
+        run: |
+          sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+          .github/scripts/linux-packages.sh gcc-13 g++-13
+      - name: Configure
+        run: >-
+          cmake -S port -B build/port -G Ninja -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_C_COMPILER=gcc-13 -DCMAKE_CXX_COMPILER=g++-13 -DFETCHCONTENT_TRY_FIND_PACKAGE_MODE=NEVER
+          "-DCMAKE_EXE_LINKER_FLAGS=-static-libstdc++ -static-libgcc -Wl,--exclude-libs,libstdc++.a:libgcc.a:libgcc_eh.a"
+      - name: Build
+        run: cmake --build build/port
+      - name: Test
+        run: ctest --test-dir build/port -j4 --output-on-failure
+      - name: Package
+        # strip keeps the names -rdynamic exports, which the crash reports show.
+        run: |
+          test "$(build/port/crusader-port --version)" = "No More Regret ${{ needs.version.outputs.version }}"
+          mkdir -p "dist/$NAME"
+          cp build/port/crusader-port LICENSE README.md README.ko.md port/common/fonts/OFL.md "dist/$NAME/"
+          strip "dist/$NAME/crusader-port"
+          tar -C dist -czf "dist/$NAME.tar.gz" "$NAME"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: linux-x64
+          path: dist/*.tar.gz
+          if-no-files-found: error
+
+  windows:
+    name: Windows x64
+    needs: version
+    runs-on: ubuntu-24.04
+    env:
+      NAME: no-more-regret-${{ needs.version.outputs.version }}-windows-x64
+    steps:
+      - uses: actions/checkout@v7
+      - name: Packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ninja-build g++-mingw-w64-x86-64-win32 wine wine64 zip
+      - name: Wine prefix
+        run: port/cmake/wine.sh wineboot --init
+      - name: Configure
+        run: >-
+          cmake -S port -B build/port-win -G Ninja -DCMAKE_BUILD_TYPE=Release
+          --toolchain "$PWD/port/cmake/mingw-w64-x86_64.cmake"
+      - name: Build
+        run: cmake --build build/port-win
+      - name: Test
+        run: ctest --test-dir build/port-win -j4 --output-on-failure
+      - name: Package
+        # Not stripped: a crash report on Windows gives the stack's addresses
+        # alone, which the program's symbols name.
+        run: |
+          mkdir -p "dist/$NAME"
+          cp build/port-win/crusader-port.exe LICENSE README.md README.ko.md port/common/fonts/OFL.md "dist/$NAME/"
+          (cd dist && zip -qr "$NAME.zip" "$NAME")
+      - uses: actions/upload-artifact@v7
+        with:
+          name: windows-x64
+          path: dist/*.zip
+          if-no-files-found: error
+
+  release:
+    name: Draft release
+    if: github.ref_type == 'tag'
+    needs: [version, linux, windows]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          prerelease=
+          case "$GITHUB_REF_NAME" in *-*) prerelease=--prerelease ;; esac
+          gh release create "$GITHUB_REF_NAME" dist/* --repo "$GITHUB_REPOSITORY" --verify-tag --draft $prerelease \
+            --title "No More Regret $VERSION" --generate-notes

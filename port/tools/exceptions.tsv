@@ -1,0 +1,24 @@
+common/src/cache/cacheblk.h	NOLINT(google-explicit-constructor)	a block is its offset, as the original's
+common/src/display/vframe.cpp	-Wunreachable-code	The original's code after the halt.
+common/src/display/vframe.cpp	-Warray-bounds	The original's read past header; nothing calls packBands.
+common/src/display/vframe.cpp	-Wstringop-overread	The original's read past header; nothing calls packBands.
+common/src/file/tagflex.cpp	-Wformat-truncation	The original's 80 bytes are too few for a name past 60 or so, which the size cuts short; nothing calls writeDefines, and sound.flx's names are short.
+common/src/file/tagflex.cpp	-Wformat-truncation	As writeDefines's.
+common/src/game/animprim.h	NOLINT(google-explicit-constructor)	the status is its word, as the original's
+common/src/game/boboboom.cpp	NOLINT(readability-simplify-boolean-expr)	the original's disabled test
+common/src/game/crusader.cpp	-Wunreachable-code	The original's code after the return.
+common/src/game/dtable.cpp	-Wuninitialized	The original's: the pointer is never set (above); nothing calls it.
+common/src/game/pathfind.cpp	NOLINT(readability-simplify-boolean-expr)	the original's disabled test
+common/src/game/pathfind.cpp	NOLINT(readability-simplify-boolean-expr)	the original's disabled test
+common/src/graph/cycle.cpp	clang-format	RGB has constructors, so these are set by the module's static constructor, not in the data. clang-format 20 breaks a long line of a reference to an array of a class after its declarator (RGB (&x)\n[7]).
+common/src/item/item.h	NOLINT(google-explicit-constructor)	an item is its number, as the original's
+common/src/item/itemcach.cpp	-Wformat-truncation	The original's 80 bytes are too few for the largest counts, which the size cuts short; nothing counts bad items (above). GCC sees it without optimizing.
+common/src/item/itemcach.cpp	NOLINT(readability-simplify-boolean-expr)	the original's disabled test
+common/src/item/scrit.cpp	-Wvarargs	The original's last named parameter is a 16-bit value, which the call promotes: ISO C++ leaves va_start after it undefined, GCC's and Clang's va_start do not use it.
+common/src/item/scrit.h	NOLINT(google-explicit-constructor)	a script is its tokens, as the original's
+common/src/item/scrit.h	NOLINT(google-explicit-constructor)	passed as its text, as the original's
+common/src/kernel/kernel.cpp	NOLINT(readability-simplify-boolean-expr)	IS_ITEM_TYPE is the original's range test, negated
+common/src/kernel/kprocess.h	NOLINT(google-explicit-constructor)	an event's data is a number or a pointer, as the original's
+common/src/kernel/kprocess.h	NOLINT(google-explicit-constructor)	the same
+common/src/kernel/mlist.cpp	-Wvarargs	The original's last named parameter is a 16-bit value, which the call promotes: ISO C++ leaves va_start after it undefined, GCC's and Clang's va_start do not use it.
+common/src/kernel/mlist.h	NOLINT(google-explicit-constructor)	an entry is its word, as the original's

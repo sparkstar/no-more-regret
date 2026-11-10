@@ -1,0 +1,51 @@
+# The port built and its tests that need no game data run (port/test/README.md):
+# on Linux with GCC, and for Windows with MinGW-w64, its tests under wine.
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  linux:
+    name: Linux (GCC)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - name: Packages
+        # clang-format 20 for the format's checks (format, unified_values_current, text).
+        run: .github/scripts/linux-packages.sh clang-format-20
+      - name: Configure
+        run: cmake -S port -B build/port -G Ninja -DFETCHCONTENT_TRY_FIND_PACKAGE_MODE=NEVER
+      - name: Build
+        run: cmake --build build/port
+      - name: Test
+        run: ctest --test-dir build/port -j4 --output-on-failure
+
+  windows:
+    name: Windows (MinGW-w64, tests under wine)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - name: Packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ninja-build g++-mingw-w64-x86-64-win32 wine wine64
+      - name: Wine prefix
+        # Made once before the tests, which would each wait for it.
+        run: port/cmake/wine.sh wineboot --init
+      - name: Configure
+        run: cmake -S port -B build/port-win -G Ninja --toolchain "$PWD/port/cmake/mingw-w64-x86_64.cmake"
+      - name: Build
+        run: cmake --build build/port-win
+      - name: Test
+        run: ctest --test-dir build/port-win -j4 --output-on-failure

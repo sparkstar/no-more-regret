@@ -1,0 +1,7 @@
+# What LeakSanitizer is not to report when the game's tests check that the
+# game releases all it holds at the run's end (LSAN_OPTIONS=use_globals=0,
+# so that what only a global holds is reported too): the C and C++
+# libraries' own, which their globals hold for the process (stdout's
+# buffer, the time zone's data, libstdc++'s emergency pool for exceptions).
+leak:libc.so
+leak:libstdc++.so

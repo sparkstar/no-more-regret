@@ -1,0 +1,56 @@
+# Clang 20's checks. The port built under the address and undefined behaviour
+# sanitizers, without the window, and its tests that need no game data; and
+# the clang-tidy rules on all the port's code, with the compile commands of
+# tidy.py's own build (configured with the window, not built). The ctest tidy
+# is left out of the sanitizers' tests: their build has no window.cpp, and on
+# a runner's few cores the rules take longer than the ctest's time limit.
+name: Sanitizers and clang-tidy
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sanitizers-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  sanitizers:
+    name: Linux (Clang 20, ASan and UBSan)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - name: Packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ninja-build clang-20 libclang-rt-20-dev clang-format-20
+      - name: Configure
+        run: >-
+          cmake -S port -B build/asan -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo
+          -DCMAKE_C_COMPILER=clang-20 -DCMAKE_CXX_COMPILER=clang++-20 -DPORT_WINDOW=OFF
+          "-DCMAKE_CXX_FLAGS=-fsanitize=address,undefined -fno-sanitize=alignment,function,vptr -fno-omit-frame-pointer"
+      - name: Build
+        run: cmake --build build/asan
+      - name: Test
+        env:
+          UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+        run: ctest --test-dir build/asan -j4 --output-on-failure -E '^tidy$'
+
+  tidy:
+    name: clang-tidy (Clang 20)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - name: Packages
+        # SDL's configure, with the window, stops without X11's or Wayland's headers.
+        run: .github/scripts/linux-packages.sh clang-20 clang-tidy-20 clang-tools-20
+      - name: Configure
+        # tidy.py's build, which it would configure itself: its compile commands alone.
+        run: cmake -S port -B build/tidy -G Ninja -DCMAKE_C_COMPILER=clang-20 -DCMAKE_CXX_COMPILER=clang++-20
+      - name: clang-tidy
+        run: python3 port/tools/tidy.py --all

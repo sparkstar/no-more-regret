@@ -1,0 +1,5 @@
+#!/bin/sh
+# Before a commit: the staged C++ files of port/ must be in the port's format.
+# On with
+#   git config core.hooksPath port/tools/hooks
+exec python3 port/tools/format.py --staged

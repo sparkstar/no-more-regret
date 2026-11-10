@@ -1,0 +1,14 @@
+# Builds
+/build/
+# The player's own game files (cd/README.md): only the folders are kept
+/cd/noregret/*
+/cd/noremorse/*
+!/cd/noregret/.gitkeep
+!/cd/noremorse/.gitkeep
+# The player's recordings (tools/replays.py), which hold their saves and settings
+/replays/
+# Python's caches
+__pycache__/
+# The port's crash reports
+*-crash-*.log
+*-crash-*.dmp

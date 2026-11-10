@@ -1,0 +1,9 @@
+# The terminals of mission 1 (port/test/scenario/terminals.py --write): for each terminal and language the
+# first 16 digits of the SHA-256 of the terminal's part of the screen, a page each, as the port
+# shows them.
+dbeyer	en	ba21b5d02c8b4b4d,6674821fde06629c
+dbeyer	ko	2abd4e12b1c29869
+mgreene	en	c2c738044afb49ac
+mgreene	ko	c1a3fc1752a2ade3
+resist	en	938ba4ee84169248
+resist	ko	4127e19c5b63d2ff

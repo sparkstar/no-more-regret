@@ -1,0 +1,18 @@
+# The port's format:
+# clang-format 20; port/tools/format.py applies it, ctest's format checks it.
+BasedOnStyle: LLVM
+IndentWidth: 4
+ColumnLimit: 120
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterFunction: true
+PointerAlignment: Right
+AccessModifierOffset: -4
+AllowShortFunctionsOnASingleLine: Inline
+FixNamespaceComments: false
+BreakStringLiterals: false
+InsertBraces: true
+SortIncludes: Never
+# const before the type (clang-tidy's misc-const-correctness writes it
+# after).
+QualifierAlignment: Left
